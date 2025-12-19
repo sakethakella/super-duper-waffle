@@ -4,7 +4,16 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
+  const removetoken=async()=>{
+    try{
+      const response = await fetch("http://127.0.1:8000/api/logout",{method: "GET",credentials: "include"});
+      if(response.ok){
+        console.log("Logged out successfully");
+      }
+    }catch(error){
+      console.error("Error during logout:", error);
+    }
+  };
   useEffect(() => {
     const storedAuth = localStorage.getItem("auth");
     if (storedAuth === "true") setIsAuthenticated(true);
@@ -17,6 +26,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem("auth");
+    removetoken();
     setIsAuthenticated(false);
   };
 

@@ -1,4 +1,6 @@
 import shutil
+from datetime import datetime, timedelta
+from fastapi import Depends,Response
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -6,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import HTTPException, status
 from fastapi import UploadFile, File
 from pydantic import BaseModel
+import jwwtlib
 from pathlib import Path
 import os
 
@@ -34,31 +37,42 @@ class LoginRequest(BaseModel):
     password: str
 
 passwords={
-    "saketh":"Safe@1234",
-    "admin":"Safe@12345"
-}
+        "username":"saketh",
+        "password":"Safe@1234"
+     }
 
 @app.get("/")
 def read_root():
     return FileResponse(os.path.join(BUILD_DIR, "index.html"))
 
 @app.post("/api/login")
-async def login(data: LoginRequest):
-    if data.username not in passwords:
+async def login(data: LoginRequest,response: Response):
+    if data.username != passwords['username']:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
 
-    if data.password != passwords[data.username]:
+    if data.password != passwords['password']:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
-    return {"message": "valid credentials"}
+    token = jwwtlib.create_token(passwords, expiration_time=timedelta(hours=2))
+    print(token)
+    response.set_cookie(
+        key="access_token",       # cookie name
+        value=token,              # JWT token
+        httponly=True,            # cannot be accessed via JS
+        secure=False,             # True if HTTPS
+        samesite="lax",           # protect against CSRF
+        max_age=2*60*60           # 2 hours in seconds
+    )
+    return {"message": "valid credentials",
+            "token":token}
 
 @app.post("/api/upload")
-async def upload(file: UploadFile = File(...)):
+async def upload(file: UploadFile = File(...),payload: dict = Depends(jwwtlib.verify_token)):
     file_path = os.path.join(FILE_DIR, file.filename)
 
     try:
@@ -73,7 +87,7 @@ async def upload(file: UploadFile = File(...)):
     }
 
 @app.get("/api/files")
-def get_files():
+def get_files(payload: dict = Depends(jwwtlib.verify_token)):
     files = []
 
     for f in FILE_DIR.iterdir():
@@ -86,20 +100,33 @@ def get_files():
     return files
 
 @app.get("/api/files/{filename}")
-def download_file(filename: str):
-    for f in FILE_DIR.iterdir():
-        if f.is_file() and f.name == filename:
-            return FileResponse(f.resolve(), media_type="application/octet-stream", filename=filename)
-    raise HTTPException(status_code=404, detail="File not found")
+def download_file(filename: str,payload: dict = Depends(jwwtlib.verify_token)):
+    safe_path = (FILE_DIR / filename).resolve()
+    if not str(safe_path).startswith(str(FILE_DIR)) or not safe_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    response = FileResponse(
+        safe_path,
+        media_type="application/octet-stream",
+        filename=filename
+    )
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 @app.get("/api/files/delete/{filename}")
-def delete_file(filename: str):
+def delete_file(filename: str,payload: dict = Depends(jwwtlib.verify_token)):
     for f in FILE_DIR.iterdir():
         if f.is_file() and f.name == filename:
             f.unlink()
             return {"message":'file deleted successfully'}
        
     raise HTTPException(status_code=404, detail="File not found")
+
+@app.get("/api/logout")
+def handle_logout(response: Response):
+    response.delete_cookie(key="access_token")
+    return {"message": "Logged out successfully"}
 
 @app.get("/{path:path}")
 def spa(path: str):

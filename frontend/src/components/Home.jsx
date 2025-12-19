@@ -4,10 +4,11 @@ import { useEffect } from "react";
 
 const Home = () => {
   const [files, setFiles] = useState([]);
+  const token=localStorage.getItem("token");
   useEffect(() => {
     const fetchFiles = async () => {
       try {
-        const response = await fetch("http://192.168.1.5:8000/api/files");
+        const response = await fetch("http://127.0.0.1:8000/api/files",{method: "GET",credentials: "include"});
         const data = await response.json();
         setFiles(data);
       } catch (err) {
@@ -17,13 +18,42 @@ const Home = () => {
 
     fetchFiles();
   }, []);
+    async function openFile(fileName) {
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/files/${fileName}`, {
+        method: 'GET',
+        credentials: "include"
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+      }
+
+      const fileBlob = await response.blob();
+      const fileUrl = URL.createObjectURL(fileBlob);
+
+      // Create a temporary <a> element to trigger download
+      const a = document.createElement("a");
+      a.href = fileUrl;
+      a.download = fileName; // ✅ this sets the correct filename
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      // Clean up the temporary URL
+      URL.revokeObjectURL(fileUrl);
+
+    } catch (error) {
+      console.error("Failed to fetch the file:", error);
+    }
+  }
 
   const handleDownload = (fileName) => {
-    window.open(`http://192.168.1.5:8000/api/files/${fileName}`, "_blank");
+    openFile(fileName);
   };
   const handleDelete = async (fileName) => {
     try{
-      const response = await fetch(`http://192.168.1.5:8000/api/files/delete/${fileName}`);
+      const response = await fetch(`http://127.0.0.1:8000/api/files/delete/${fileName}`,{method: "GET",credentials: "include"});
       const output= await response.json();
       if(response.ok){
         window.location.reload();

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 const Upload = () => {
   const [file, setFile] = useState(null);
   const [status, setStatus] = useState("");
+  const token=localStorage.getItem("token");
   const navigate = useNavigate();
   
   const handleUpload = async () => {
@@ -17,9 +18,10 @@ const Upload = () => {
 
     setStatus("Uploading...");
     try {
-        const response = await fetch("http://192.168.1.5:8000/api/upload", {
+        const response = await fetch("http://127.0.0.1:8000/api/upload", {
         method: "POST",
         body: formData,
+        credentials: "include"
       });
 
       if (response.ok) {
@@ -29,10 +31,12 @@ const Upload = () => {
       } 
       else {
         setStatus("Upload failed.");
+        console.error("Upload failed:", await response.text());
       }
     } 
     catch (error) {
       setStatus("Upload failed.");
+      console.error("Error during upload:", error);
     }
   };
 

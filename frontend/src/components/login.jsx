@@ -14,7 +14,7 @@ const Login = () => {
     e.preventDefault();
     console.log("Logging in with:", credentials);
     try{
-      const response = await fetch("http://192.168.1.5:8000/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(credentials)});
+      const response = await fetch("http://127.0.0.1:8000/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(credentials)});
       let result = await response.json();
       console.log("Login successful:", result,response);
       if (!response.ok) {
