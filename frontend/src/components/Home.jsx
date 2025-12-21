@@ -8,7 +8,7 @@ const Home = () => {
   useEffect(() => {
     const fetchFiles = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/files",{method: "GET",credentials: "include"});
+        const response = await fetch("/api/files",{method: "GET",credentials: "include"});
         const data = await response.json();
         setFiles(data);
       } catch (err) {
@@ -20,7 +20,7 @@ const Home = () => {
   }, []);
     async function openFile(fileName) {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/files/${fileName}`, {
+      const response = await fetch(`/api/files/${fileName}`, {
         method: 'GET',
         credentials: "include"
       });
@@ -53,7 +53,7 @@ const Home = () => {
   };
   const handleDelete = async (fileName) => {
     try{
-      const response = await fetch(`http://127.0.0.1:8000/api/files/delete/${fileName}`,{method: "GET",credentials: "include"});
+      const response = await fetch(`/api/files/delete/${fileName}`,{method: "GET",credentials: "include"});
       const output= await response.json();
       if(response.ok){
         window.location.reload();
